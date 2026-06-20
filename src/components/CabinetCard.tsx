@@ -31,7 +31,9 @@ export function CabinetCard({ result, showCategoryBadges = true }: CabinetCardPr
 
   const isExpanded = expandedCabinetId === cabinet.id;
   const isFav = favorites.includes(cabinet.id);
-  const inPlan = isInPlan(cabinet.id);
+  const inPlan = selectedCategory
+    ? isInPlan(selectedCategory, cabinet.id)
+    : false;
 
   const compartment = selectedCategory
     ? getCompartmentForCategory(cabinet, selectedCategory)
@@ -140,20 +142,23 @@ export function CabinetCard({ result, showCategoryBadges = true }: CabinetCardPr
               />
             </button>
 
-            {selectedCategory && isAccepted && !isFull && (
+            {selectedCategory && inPlan && (
               <button
-                onClick={() =>
-                  inPlan ? removeFromPlan(cabinet.id) : addToPlan(selectedCategory, cabinet)
-                }
-                className={clsx(
-                  'w-9 h-9 rounded-full flex items-center justify-center transition-all',
-                  inPlan
-                    ? 'bg-forest-600 text-white hover:bg-forest-700'
-                    : 'bg-forest-100 text-forest-600 hover:bg-forest-200'
-                )}
-                aria-label={inPlan ? '从计划移除' : '加入投递计划'}
+                onClick={() => removeFromPlan(selectedCategory, cabinet.id)}
+                className="w-9 h-9 rounded-full flex items-center justify-center transition-all bg-forest-600 text-white hover:bg-forest-700"
+                aria-label="从计划移除"
               >
-                {inPlan ? <Check size={18} /> : <Plus size={18} />}
+                <Check size={18} />
+              </button>
+            )}
+
+            {selectedCategory && !inPlan && isAccepted && !isFull && (
+              <button
+                onClick={() => addToPlan(selectedCategory, cabinet)}
+                className="w-9 h-9 rounded-full flex items-center justify-center transition-all bg-forest-100 text-forest-600 hover:bg-forest-200"
+                aria-label="加入投递计划"
+              >
+                <Plus size={18} />
               </button>
             )}
           </div>

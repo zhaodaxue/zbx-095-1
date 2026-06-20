@@ -9,9 +9,9 @@ interface AppStore extends AppState {
   toggleFavorite: (cabinetId: string) => void;
   toggleExpand: (cabinetId: string) => void;
   addToPlan: (category: Category, cabinet: Cabinet) => void;
-  removeFromPlan: (cabinetId: string) => void;
+  removeFromPlan: (category: Category, cabinetId: string) => void;
   clearPlan: () => void;
-  isInPlan: (cabinetId: string) => boolean;
+  isInPlan: (category: Category, cabinetId: string) => boolean;
 }
 
 export const useAppStore = create<AppStore>((set, get) => ({
@@ -42,7 +42,12 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
   addToPlan: (category, cabinet) => {
     const { deliveryPlan } = get();
-    if (deliveryPlan.some((item) => item.cabinet.id === cabinet.id)) return;
+    if (
+      deliveryPlan.some(
+        (item) => item.category === category && item.cabinet.id === cabinet.id
+      )
+    )
+      return;
     set({
       deliveryPlan: [
         ...deliveryPlan,
@@ -51,16 +56,20 @@ export const useAppStore = create<AppStore>((set, get) => ({
     });
   },
 
-  removeFromPlan: (cabinetId) => {
+  removeFromPlan: (category, cabinetId) => {
     const { deliveryPlan } = get();
     set({
-      deliveryPlan: deliveryPlan.filter((item) => item.cabinet.id !== cabinetId),
+      deliveryPlan: deliveryPlan.filter(
+        (item) => !(item.category === category && item.cabinet.id === cabinetId)
+      ),
     });
   },
 
   clearPlan: () => set({ deliveryPlan: [] }),
 
-  isInPlan: (cabinetId) => {
-    return get().deliveryPlan.some((item) => item.cabinet.id === cabinetId);
+  isInPlan: (category, cabinetId) => {
+    return get().deliveryPlan.some(
+      (item) => item.category === category && item.cabinet.id === cabinetId
+    );
   },
 }));

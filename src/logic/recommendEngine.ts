@@ -28,10 +28,11 @@ export function calculateScore(cabinet: Cabinet, category: Category): number {
   const compartment = getCompartmentForCategory(cabinet, category);
   if (!compartment || !compartment.accepted) return -1;
 
-  const distanceFactor = 1000 / Math.max(cabinet.distance, 1);
+  const maxDistance = 3000;
+  const distanceNorm = Math.max(0, 1 - cabinet.distance / maxDistance);
   const capacityRatio = (compartment.total - compartment.used) / compartment.total;
 
-  return distanceFactor * 0.4 + capacityRatio * 100 * 0.6;
+  return distanceNorm * 0.75 + capacityRatio * 0.25;
 }
 
 export function recommendCabinets(
