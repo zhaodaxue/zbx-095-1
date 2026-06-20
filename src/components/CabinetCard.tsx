@@ -1,10 +1,11 @@
-import { Star, MapPin, Footprints, ChevronDown, ChevronUp, Plus, Check, FileText, Recycle, Package, Shirt, type LucideIcon } from 'lucide-react';
+import { Star, MapPin, Footprints, ChevronDown, ChevronUp, Plus, Check, FileText, Recycle, Package, Shirt, Lock, type LucideIcon } from 'lucide-react';
 import { clsx } from 'clsx';
 import { RecommendationResult, Category } from '../types';
 import { useAppStore } from '../store/useAppStore';
 import { CapacityBar } from './CapacityBar';
 import { getCompartmentForCategory } from '../logic/recommendEngine';
 import { CATEGORY_META } from '../data/categories';
+import { formatDistanceShort } from '../logic/routePlanner';
 
 const categoryIconMap: Record<Category, LucideIcon> = {
   paper: FileText,
@@ -26,8 +27,20 @@ function formatDistance(meters: number): string {
 }
 
 export function CabinetCard({ result, showCategoryBadges = true }: CabinetCardProps) {
-  const { cabinet, isFull, isAccepted, availableCapacity, totalCapacity } = result;
-  const { selectedCategory, favorites, expandedCabinetId, toggleFavorite, toggleExpand, addToPlan, removeFromPlan, isInPlan } = useAppStore();
+  const { cabinet, isFull, isAccepted } = result;
+  const {
+    selectedCategory,
+    favorites,
+    expandedCabinetId,
+    routeStops,
+    routePlan,
+    toggleFavorite,
+    toggleExpand,
+    addToPlan,
+    removeFromPlan,
+    isInPlan,
+    getStopOrderFor,
+  } = useAppStore();
 
   const isExpanded = expandedCabinetId === cabinet.id;
   const isFav = favorites.includes(cabinet.id);
@@ -38,6 +51,16 @@ export function CabinetCard({ result, showCategoryBadges = true }: CabinetCardPr
   const compartment = selectedCategory
     ? getCompartmentForCategory(cabinet, selectedCategory)
     : null;
+
+  const stop = selectedCategory
+    ? routeStops.find(
+        (s) => s.stopId === cabinet.id && s.categories.includes(selectedCategory)
+      )
+    : null;
+
+  const order = selectedCategory ? getStopOrderFor(selectedCategory, cabinet.id) : null;
+  const isLocked = stop?.locked ?? false;
+  const leg = routePlan?.legs.find((l) => l.toStopId === cabinet.id);
 
   return (
     <div
@@ -64,9 +87,29 @@ export function CabinetCard({ result, showCategoryBadges = true }: CabinetCardPr
 
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2 mb-1">
-              <h3 className="font-display text-base md:text-lg font-semibold text-forest-800 truncate">
-                {cabinet.name}
-              </h3>
+              <div className="flex items-center gap-2 min-w-0">
+                {order !== null && order > 0 && (
+                  <span
+                    className={clsx(
+                      'shrink-0 inline-flex items-center justify-center font-display font-bold text-[11px] rounded-full w-6 h-6 text-white shadow-soft',
+                      isLocked ? 'bg-amber-500' : 'bg-forest-600'
+                    )}
+                    title={isLocked ? '站点位次已锁定' : `第 ${order} 站`}
+                  >
+                    {order}
+                  </span>
+                )}
+                <h3 className="font-display text-base md:text-lg font-semibold text-forest-800 truncate">
+                  {cabinet.name}
+                </h3>
+                {isLocked && (
+                  <Lock
+                    size={13}
+                    className="shrink-0 text-amber-500"
+                    title="位次已锁定"
+                  />
+                )}
+              </div>
               <div className="flex items-center gap-1 shrink-0">
                 {!isAccepted && selectedCategory && (
                   <span className="text-[10px] md:text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">
@@ -177,12 +220,27 @@ export function CabinetCard({ result, showCategoryBadges = true }: CabinetCardPr
 
         {isExpanded && (
           <div className="mt-3 p-3 md:p-4 rounded-xl bg-cream-50 border border-cream-100 animate-slide-down">
+            {leg && (
+              <div className="mb-3 p-3 rounded-lg bg-white border border-forest-100">
+                <p className="text-[11px] text-forest-600/70 mb-1">
+                  【顺路编排 · 前序路线】
+                </p>
+                <p className="text-xs md:text-sm text-forest-700 leading-relaxed">
+                  <span className="font-medium text-forest-800">
+                    步行 {leg.walkMinutes} 分钟
+                  </span>
+                  （{formatDistanceShort(leg.distanceMeters)}）
+                  <br />
+                  {leg.summary}
+                </p>
+              </div>
+            )}
             <div className="flex items-center gap-2 mb-2">
               <div className="w-6 h-6 rounded-full bg-forest-600 text-white flex items-center justify-center">
                 <Footprints size={13} />
               </div>
               <span className="font-medium text-forest-800 text-sm">
-                步行约 {cabinet.walkMinutes} 分钟（{formatDistance(cabinet.distance)}）
+                从当前位置步行约 {cabinet.walkMinutes} 分钟（{formatDistance(cabinet.distance)}）
               </span>
             </div>
             <p className="text-xs md:text-sm text-forest-700/80 leading-relaxed pl-8">
